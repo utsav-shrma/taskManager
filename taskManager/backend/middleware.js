@@ -34,4 +34,18 @@ async function authenticateToken(req, res, next) {
    
   }
 
-  module.exports = authenticateToken;
+  function authorize(role) {
+    return (req, res, next) => {
+      // Check if the user is authenticated and has the required role
+      if (req.user && req.user.role === role) {
+        console.log(role);
+        console.log(req.user.role);
+        return next(); // User has the required role, proceed to the next middleware/route
+      }
+  
+      return res.status(403).json({ message: 'Forbidden' }); // User does not have the required role, deny access
+    };
+    
+  }
+
+  module.exports = {authenticateToken,authorize};

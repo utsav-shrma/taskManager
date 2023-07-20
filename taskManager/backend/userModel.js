@@ -23,7 +23,12 @@ const userSchema = new mongoose.Schema({
   task:{
     type:mongoose.Schema.Types.ObjectId,
     ref: 'Task',
-  }
+  },
+  role: { 
+    type: String, 
+    enum: ['user', 'admin'], 
+    default: 'user' 
+  },
 });
 
 

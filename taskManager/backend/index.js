@@ -3,7 +3,7 @@ const mongoose = require('mongoose');
 const jwt = require('jsonwebtoken');
 const app = express();
 const port = 3000;
-const authenticateToken = require('./middleware');
+const {authenticateToken,authorize} = require('./middleware');
 const secret = 'my-secret-key';
 const User = require('./userModel');
 const bcrypt = require('bcrypt');
@@ -20,9 +20,9 @@ app.use(express.json());
 // User registration
 app.post('/register', async (req, res) => {
   try {
-    const { fullName,email, password } = req.body;
+    const { fullName,email, password,role } = req.body;
     const hashedPassword = await bcrypt.hash(password, 10);
-    const newUser = new User({ fullName,email, password: hashedPassword });
+    const newUser = new User({ fullName,email, password: hashedPassword,role });
     await newUser.save();
     res.status(201).json({ message: 'User registered successfully' });
   } catch (err) {
@@ -61,9 +61,7 @@ app.use(authenticateToken);
 // handling users
 
 // read all users for admin
-
-//add auth for admin here
-app.get('/user', async (req, res) => {
+app.get('/user', authorize('admin'),async (req, res) => {
   try {
     const user = await User.find();
     res.json(user);
@@ -73,7 +71,7 @@ app.get('/user', async (req, res) => {
 });
 
 //read specefic user
-app.get('/user/:id', async (req, res) => {
+app.get('/user/:id', authorize('admin'), async (req, res) => {
   try {
     const user = await User.findById(req.params.id);
     if (!user) {
@@ -86,10 +84,9 @@ app.get('/user/:id', async (req, res) => {
 });
 
 // Update (PUT) route
-app.put('/user/:id', async (req, res) => {
+app.put('/user/:id', authorize('admin'), async (req, res) => {
   try {
 
-    // add auth for admin that admin can update all users but normal user can edit his only
 
     const updatedUser = await User.findByIdAndUpdate(req.params.id, req.body, {
       new: true,
@@ -106,8 +103,7 @@ app.put('/user/:id', async (req, res) => {
 });
 
 // Delete (DELETE) route
-// add auth for admin only
-app.delete('/user/:id', async (req, res) => {
+app.delete('/user/:id', authorize('admin'), async (req, res) => {
   try {
     const updatedUser = await User.findByIdAndDelete(req.params.id);
     if (!updatedUser) {
@@ -119,6 +115,40 @@ app.delete('/user/:id', async (req, res) => {
   }
 });
 
+//shift user to router and add router me in next commit
+//read specefic user
+app.get('/me', async (req, res) => {
+  try {
+    const user = await User.findById(req.user._id);
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+    res.json(user);
+  } catch (err) {
+    console.log(err);
+    res.status(500).json({ error: 'Failed to fetch user' });
+  }
+});
+
+// Update (PUT) route
+app.put('/me', async (req, res) => {
+  try {
+
+    // add auth for admin that admin can update all users but normal user can edit his only
+
+    const updatedUser = await User.findByIdAndUpdate(req.user._id, req.body, {
+      new: true,
+      runValidators: true,
+    });
+    if (!updatedUser) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+    res.json(updatedUser);
+  } catch (err) {
+    console.log(err);
+    res.status(500).json({ error: 'Failed to update User' });
+  }
+});
 
 //handling taks
 
@@ -126,8 +156,10 @@ app.delete('/user/:id', async (req, res) => {
 app.post('/task', async (req, res) => {
   try {
     const newTask = await Task.create(req.body);
-    if(!newTask.user){
-      newTask.user=req.user;
+    
+    if(!newTask.assignedUser)
+    {
+      newTask.assignedUser=req.user;
     }
     res.status(201).json(newTask);
   } catch (err) {
