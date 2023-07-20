@@ -55,8 +55,72 @@ app.post('/login', async (req, res) => {
   }
 });
  
+//auth middleware
 app.use(authenticateToken);
 
+// handling users
+
+// read all users for admin
+
+//add auth for admin here
+app.get('/user', async (req, res) => {
+  try {
+    const user = await User.find();
+    res.json(user);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch users' });
+  }
+});
+
+//read specefic user
+app.get('/user/:id', async (req, res) => {
+  try {
+    const user = await User.findById(req.params.id);
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+    res.json(user);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch user' });
+  }
+});
+
+// Update (PUT) route
+app.put('/user/:id', async (req, res) => {
+  try {
+
+    // add auth for admin that admin can update all users but normal user can edit his only
+
+    const updatedUser = await User.findByIdAndUpdate(req.params.id, req.body, {
+      new: true,
+      runValidators: true,
+    });
+    if (!updatedUser) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+    res.json(updatedUser);
+  } catch (err) {
+    console.log(err);
+    res.status(500).json({ error: 'Failed to update User' });
+  }
+});
+
+// Delete (DELETE) route
+// add auth for admin only
+app.delete('/user/:id', async (req, res) => {
+  try {
+    const updatedUser = await User.findByIdAndDelete(req.params.id);
+    if (!updatedUser) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+    res.json(updatedUser);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to delete User' });
+  }
+});
+
+
+//handling taks
 
 // Create (POST) route
 app.post('/task', async (req, res) => {
@@ -82,6 +146,7 @@ app.get('/task', async (req, res) => {
   }
 });
 
+//read specefic
 app.get('/task/:id', async (req, res) => {
   try {
     const task = await Task.findById(req.params.id);
@@ -124,6 +189,8 @@ app.delete('/task/:id', async (req, res) => {
   }
 });
 
+
+//default route
 app.listen(port, () => {
   console.log(`Server is running on port ${port}`);
 });
